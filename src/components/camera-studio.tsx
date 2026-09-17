@@ -48,10 +48,12 @@ export default function CameraStudio({ imageUrl, cameraPresetId, label, motions 
   const codec = typeof window === 'undefined' ? null : pickCodec()
 
   // Load the source image and size the canvas to it.
+  //
+  // No state reset at the top: the composer keys this component on imageUrl, so
+  // a new image remounts it with fresh state rather than synchronising the old
+  // state through an effect.
   useEffect(() => {
     let cancelled = false
-    setPhase('loading')
-    setError(null)
 
     loadImage(imageUrl)
       .then((img) => {

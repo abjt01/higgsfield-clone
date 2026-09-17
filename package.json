@@ -11,7 +11,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "verify:render": "tsx scripts/verify-render.ts",
-    "verify:studio": "node scripts/verify-studio.mjs"
+    "verify:studio": "node scripts/verify-studio.mjs",
+    "verify:api": "node scripts/verify-api.mjs",
+    "probe:api": "bash scripts/probe-api.sh"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",

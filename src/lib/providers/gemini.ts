@@ -8,6 +8,9 @@ import {
 } from './types'
 
 const MODEL = 'gemini-2.5-flash-image'
+// Without this a hung call holds the job until the whole function is killed,
+// which strands it in "running" instead of failing over to the fallback.
+const TIMEOUT_MS = 60_000
 
 /**
  * Google AI Studio, gemini-2.5-flash-image ("nano banana"). Free tier, no card.
@@ -32,16 +35,21 @@ export const gemini: ImageProvider = {
 
     let res
     try {
-      res = await ai.models.generateContent({
-        model: MODEL,
-        contents: prompt,
-        config: {
-          responseModalities: ['IMAGE'],
-          // 2K because the camera-move renderer crops into the still: at 1K a
-          // 1.95x crash zoom resamples the source and the clip comes out soft.
-          imageConfig: { aspectRatio, imageSize: '2K' },
-        },
-      })
+      res = await Promise.race([
+        ai.models.generateContent({
+          model: MODEL,
+          contents: prompt,
+          config: {
+            responseModalities: ['IMAGE'],
+            // 2K because the camera-move renderer crops into the still: at 1K a
+            // 1.95x crash zoom resamples the source and the clip comes out soft.
+            imageConfig: { aspectRatio, imageSize: '2K' },
+          },
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS),
+        ),
+      ])
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       // 429 RESOURCE_EXHAUSTED is the daily free-tier quota. Everything else

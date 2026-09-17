@@ -50,7 +50,14 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
   const [error, setError] = useState<string | null>(null)
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+  // Bumped on every submit. A poll chain whose token is stale stops itself,
+  // otherwise a second generation leaves the first one still writing state.
+  const pollToken = useRef(0)
+
+  useEffect(() => () => {
+    pollToken.current++
+    if (timer.current) clearTimeout(timer.current)
+  }, [])
 
   // Split once, not on every keystroke.
   const cameraPresets = useMemo(() => presets.filter((p) => p.group === 'camera'), [presets])
@@ -68,12 +75,15 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
 
   const startPolling = useCallback((id: string) => {
     const startedAt = Date.now()
+    const token = ++pollToken.current
 
     const tick = async () => {
+      if (token !== pollToken.current) return
       try {
         // no-store on both sides: a cached poll means the job appears to hang.
         const res = await fetch(`/api/generations/${id}`, { cache: 'no-store' })
         const data = await res.json()
+        if (token !== pollToken.current) return
         if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
 
         setPoll(data)
@@ -87,6 +97,7 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
         }
         timer.current = setTimeout(tick, POLL_MS)
       } catch (err) {
+        if (token !== pollToken.current) return
         setStatus('failed')
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -99,6 +110,8 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
     event.preventDefault()
     if (!subject.trim() || status === 'queued' || status === 'running') return
 
+    pollToken.current++
+    if (timer.current) clearTimeout(timer.current)
     setError(null)
     setPoll(null)
     setStatus('queued')
@@ -208,6 +221,9 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
 
         {status === 'succeeded' && poll?.imageUrl && (
           <CameraStudio
+            // Remount per image: resets phase, motion and any recorded clip
+            // without an effect syncing them.
+            key={poll.imageUrl}
             imageUrl={poll.imageUrl}
             cameraPresetId={cameraId}
             label={camera?.label ?? 'no preset selected'}

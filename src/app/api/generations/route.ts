@@ -1,67 +1,62 @@
-import { desc, eq, sql } from 'drizzle-orm'
-import { after, NextResponse } from 'next/server'
+import { and, desc, eq, lt, sql } from 'drizzle-orm'
+import { after } from 'next/server'
 
 import { getDb } from '@/db'
 import { generations, jobs, users } from '@/db/schema'
+import { HttpError, json, route } from '@/lib/http'
 import { processJob } from '@/lib/jobs'
 import { buildPrompt, getPreset } from '@/lib/presets'
 import { ASPECT_RATIOS, type AspectRatio } from '@/lib/providers'
-import { getOrCreateUser } from '@/lib/session'
+import { checkIpRate, checkUserRate, clientIp } from '@/lib/rate-limit'
+import { getOrCreateUser, readUser } from '@/lib/session'
+import { boundedInt, cursorDate, jsonBody, optionalString, requiredText } from '@/lib/validate'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// after() keeps running past the response, but only within the function's
+// budget. The default would kill a generation mid-flight and strand the job.
+export const maxDuration = 60
 
-const NO_STORE = { 'Cache-Control': 'no-store' }
+const MAX_PROMPT = 2000
 
-function isAspectRatio(v: unknown): v is AspectRatio {
-  return typeof v === 'string' && (ASPECT_RATIOS as readonly string[]).includes(v)
+function presetOr400(value: unknown, field: string, group: 'camera' | 'style') {
+  const id = optionalString(value, field, 80)
+  if (!id) return undefined
+
+  const preset = getPreset(id)
+  if (!preset || preset.group !== group) throw new HttpError(`Unknown ${group} preset: ${id}`, 400)
+  return preset
 }
 
 /** Create a generation and queue its job. Returns immediately; the client polls. */
-export async function POST(request: Request) {
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Body must be JSON' }, { status: 400, headers: NO_STORE })
-  }
+export const POST = route(async (request: Request) => {
+  checkIpRate(clientIp(request))
 
-  const { prompt, aspectRatio, cameraId, styleId } = (body ?? {}) as Record<string, unknown>
+  const body = await jsonBody(request)
+  const subject = requiredText(body.prompt, 'Prompt', MAX_PROMPT)
+  const camera = presetOr400(body.cameraId, 'cameraId', 'camera')
+  const style = presetOr400(body.styleId, 'styleId', 'style')
 
-  if (typeof prompt !== 'string' || !prompt.trim()) {
-    return NextResponse.json({ error: 'A prompt is required' }, { status: 400, headers: NO_STORE })
+  const requested = optionalString(body.aspectRatio, 'aspectRatio', 10)
+  if (requested && !(ASPECT_RATIOS as readonly string[]).includes(requested)) {
+    throw new HttpError(`Unsupported aspect ratio: ${requested}`, 400)
   }
-  if (prompt.length > 2000) {
-    return NextResponse.json({ error: 'Prompt is too long (max 2000 characters)' }, { status: 400, headers: NO_STORE })
-  }
+  const ratio = (requested ?? '1:1') as AspectRatio
 
-  const camera = typeof cameraId === 'string' ? getPreset(cameraId) : undefined
-  const style = typeof styleId === 'string' ? getPreset(styleId) : undefined
-  if (typeof cameraId === 'string' && cameraId && !camera) {
-    return NextResponse.json({ error: `Unknown camera preset: ${cameraId}` }, { status: 400, headers: NO_STORE })
-  }
-  if (typeof styleId === 'string' && styleId && !style) {
-    return NextResponse.json({ error: `Unknown style preset: ${styleId}` }, { status: 400, headers: NO_STORE })
-  }
-
-  const ratio: AspectRatio = isAspectRatio(aspectRatio) ? aspectRatio : '1:1'
   const db = getDb()
   const user = await getOrCreateUser()
+  await checkUserRate(user.id)
 
-  if (user.credits <= 0) {
-    return NextResponse.json({ error: 'Out of credits' }, { status: 402, headers: NO_STORE })
-  }
+  if (user.credits <= 0) throw new HttpError('Out of credits', 402)
 
-  // The composed prompt is stored, not the raw subject: it is what was actually
-  // sent to the provider, and remix needs the preset ids to rebuild the composer.
-  const composed = buildPrompt(prompt, camera?.id, style?.id)
+  const composed = buildPrompt(subject, camera?.id, style?.id)
 
   const [generation] = await db
     .insert(generations)
     .values({
       userId: user.id,
       prompt: composed.prompt,
-      subject: prompt.trim(),
+      subject,
       cameraPresetId: camera?.id ?? null,
       presetId: style?.id ?? null,
       aspectRatio: ratio,
@@ -72,45 +67,46 @@ export async function POST(request: Request) {
 
   const [job] = await db.insert(jobs).values({ generationId: generation.id }).returning()
 
-  await db
+  // Guarded so concurrent requests cannot drive a balance negative.
+  const [charged] = await db
     .update(users)
     .set({ credits: sql`${users.credits} - 1` })
-    .where(eq(users.id, user.id))
+    .where(and(eq(users.id, user.id), sql`${users.credits} > 0`))
+    // No projection: the Neon/node-postgres union drops the typed overload.
+    .returning()
 
-  // Runs after the response is flushed.
+  if (!charged) throw new HttpError('Out of credits', 402)
+
   after(() => processJob(job.id))
 
-  return NextResponse.json(
-    { id: generation.id, jobId: job.id, status: 'queued', creditsLeft: user.credits - 1 },
-    { status: 202, headers: NO_STORE },
-  )
-}
+  return json({ id: generation.id, jobId: job.id, status: 'queued', creditsLeft: charged.credits }, 202)
+})
 
-/** The signed-in user's generations, newest first. Keyset paginated. */
-export async function GET(request: Request) {
+/** The current user's generations, newest first, keyset paginated. */
+export const GET = route(async (request: Request) => {
+  // Read-only: a GET must not mint a user. It previously created a row and a
+  // session on every anonymous request.
+  const user = await readUser()
+  if (!user) return json({ items: [], nextCursor: null })
+
   const url = new URL(request.url)
-  const cursor = url.searchParams.get('cursor')
-  const limit = Math.min(Number(url.searchParams.get('limit') ?? 24), 50)
+  const limit = boundedInt(url.searchParams.get('limit'), 24, 1, 50)
+  const cursor = cursorDate(url.searchParams.get('cursor'))
 
   const db = getDb()
-  const user = await getOrCreateUser()
-
   const rows = await db
     .select()
     .from(generations)
     .where(
       cursor
-        ? sql`${generations.userId} = ${user.id} and ${generations.createdAt} < ${new Date(cursor)}`
+        ? and(eq(generations.userId, user.id), lt(generations.createdAt, cursor))
         : eq(generations.userId, user.id),
     )
     .orderBy(desc(generations.createdAt))
     .limit(limit)
 
-  return NextResponse.json(
-    {
-      items: rows,
-      nextCursor: rows.length === limit ? rows[rows.length - 1].createdAt.toISOString() : null,
-    },
-    { headers: NO_STORE },
-  )
-}
+  return json({
+    items: rows,
+    nextCursor: rows.length === limit ? rows[rows.length - 1].createdAt.toISOString() : null,
+  })
+})

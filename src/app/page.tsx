@@ -1,105 +1,51 @@
-'use client'
+import Link from 'next/link'
 
-import { useState } from 'react'
-
-import { ASPECT_RATIOS, type AspectRatio } from '@/lib/providers/types'
-
-interface Result {
-  dataUrl: string
-  provider: string
-  model: string
-  fellBackFrom: { provider: string; reason: string }[]
-  ms: number
-}
+import { CAMERA_PRESETS } from '@/lib/presets/cameras'
+import { STYLE_PRESETS } from '@/lib/presets/styles'
 
 export default function Home() {
-  const [prompt, setPrompt] = useState('')
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<Result | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!prompt.trim() || loading) return
-
-    setLoading(true)
-    setError(null)
-    setResult(null)
-
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, aspectRatio }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
-      setResult(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12">
-      <h1 className="text-2xl font-semibold">Higgsfield clone — vertical slice</h1>
-      <p className="mt-1 text-sm opacity-60">
-        Prompt in, real image out. Deliberately ugly.
+    <main className="mx-auto max-w-4xl px-4 py-24 sm:px-6">
+      <p className="text-xs uppercase tracking-[0.2em] text-accent">Higgsfield clone</p>
+
+      <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+        Prompt, preset, and a camera move
+        <span className="text-accent">.</span>
+      </h1>
+
+      <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted">
+        {CAMERA_PRESETS.length} camera moves and {STYLE_PRESETS.length} styles that rewrite
+        the prompt rather than tagging a label onto it. Generations run as database-backed
+        jobs, and the result is animated on canvas into a real downloadable clip.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-3">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          placeholder="a rain-slicked Tokyo alley at night, neon reflections, anamorphic"
-          className="w-full rounded border border-current/20 bg-transparent p-3 text-sm"
-        />
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link
+          href="/create"
+          className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-accent-dim"
+        >
+          Start creating
+        </Link>
+        <a
+          href="https://github.com/abjt01/higgsfield-clone"
+          className="rounded-lg border border-line px-5 py-2.5 text-sm font-medium text-muted transition hover:border-muted/60 hover:text-fg"
+        >
+          Source
+        </a>
+      </div>
 
-        <div className="flex items-center gap-3">
-          <select
-            value={aspectRatio}
-            onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-            className="rounded border border-current/20 bg-transparent p-2 text-sm"
-          >
-            {ASPECT_RATIOS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-
-          <button
-            type="submit"
-            disabled={loading || !prompt.trim()}
-            className="rounded bg-foreground px-4 py-2 text-sm text-background disabled:opacity-40"
-          >
-            {loading ? 'Generating…' : 'Generate'}
-          </button>
-        </div>
-      </form>
-
-      {error && (
-        <p className="mt-6 rounded border border-red-500/40 p-3 text-sm text-red-500">
-          {error}
-        </p>
-      )}
-
-      {result && (
-        <section className="mt-8">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={result.dataUrl} alt={prompt} className="w-full rounded" />
-          <p className="mt-3 text-xs opacity-60">
-            {result.provider} · {result.model} · {(result.ms / 1000).toFixed(1)}s
-          </p>
-          {result.fellBackFrom.length > 0 && (
-            <p className="mt-1 text-xs text-amber-500">
-              fell back from {result.fellBackFrom.map((f) => `${f.provider} (${f.reason})`).join(', ')}
-            </p>
-          )}
-        </section>
-      )}
+      <dl className="mt-16 grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line sm:grid-cols-3">
+        {[
+          ['Never goes dark', 'Falls back to a keyless provider when the primary is exhausted.'],
+          ['Real clips', 'Canvas and MediaRecorder, not a stock video library.'],
+          ['Guest first', 'No signup wall. 50 credits on arrival.'],
+        ].map(([title, body]) => (
+          <div key={title} className="bg-surface p-5">
+            <dt className="text-sm font-medium">{title}</dt>
+            <dd className="mt-1.5 text-xs leading-relaxed text-muted">{body}</dd>
+          </div>
+        ))}
+      </dl>
     </main>
   )
 }
