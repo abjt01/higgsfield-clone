@@ -51,7 +51,7 @@ Soul ID.
 
 ## Stack
 
-Next.js 15 App Router, TypeScript, Tailwind v4, Postgres on Neon via the Vercel
+Next.js 16 App Router, TypeScript, Tailwind v4, Postgres on Neon via the Vercel
 integration, Drizzle, Vercel Blob for image storage, signed-cookie sessions.
 
 Jobs are a DB table with client polling. Boring, serverless-safe, and it survives a
@@ -72,7 +72,9 @@ Confirmed against the API docs before committing to it:
 - aspect ratio is a first-class request parameter (`1:1`, `3:2`, `2:3`, `3:4`, `4:3`,
   `4:5`, `5:4`, `9:16`, `16:9`, `21:9`) — maps directly onto the ratio picker in
   Create, so that control is real rather than decorative
-- output mime type is selectable, so JPEG is requested directly (see perf item 6)
+- output is PNG. `ImageConfig.outputMimeType` and `outputCompressionQuality` exist in
+  the SDK but are **Vertex-only and explicitly unsupported on the Gemini API**, so JPEG
+  cannot be requested at the call. Transcode at the Blob-write step instead (perf item 6)
 - quota exhaustion returns `429 RESOURCE_EXHAUSTED`, a clean and unambiguous fallback
   trigger
 - all output carries a SynthID watermark. Disclose that in the walkthrough rather than
@@ -80,6 +82,9 @@ Confirmed against the API docs before committing to it:
 
 Secondary is **Pollinations** (`image.pollinations.ai`), which needs no key at all.
 Verified live before being written in here: `200 image/jpeg`, 512x512 in 2.5s.
+Caveat found in testing: `nologo=true` does **not** suppress their watermark, so fallback
+output carries a visible "pollinations.ai" mark. Acceptable for a path that only runs
+when the primary is exhausted, but do not show it as the happy path in the walkthrough.
 
 Both sit behind one small interface:
 
@@ -183,8 +188,9 @@ rubric does not measure.
    That last one is critical. A cached polling response means generations appear to hang
    forever. It is the bug most likely to kill a live demo.
 
-6. Images. Request JPEG rather than PNG — Gemini takes an output mime type,
-   Pollinations already serves JPEG. Serve everything through `next/image`.
+6. Images. Gemini returns PNG and will not negotiate mime type on the free API, so
+   convert to JPEG when writing to Blob rather than at the generation call.
+   Pollinations already returns JPEG. Serve everything through `next/image`.
    Pre-compress preset thumbnails to small WebP at author time — dozens render per grid,
    so they matter far more than individual generated images. Configure
    `images.remotePatterns` for the Blob domain.
