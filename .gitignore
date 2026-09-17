@@ -1,0 +1,18 @@
+# secrets — never commit; .agent-logs/ is public
+.env*
+!.env.example
+
+node_modules
+.DS_Store
+*.zip
+
+# build output
+.next/
+out/
+build/
+.vercel
+*.tsbuildinfo
+
+*.log
+
+# NOTE: .agent-logs/ is deliberately NOT ignored. It ships with the repo.
