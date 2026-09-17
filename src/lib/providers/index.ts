@@ -1,11 +1,15 @@
 import { gemini } from './gemini'
 import { pollinations } from './pollinations'
+import { stub } from './stub'
 import type { GenerateOpts, GeneratedImage, ImageProvider, ProviderName } from './types'
 
 export * from './types'
 
 /** Order matters: first available provider wins, the rest are fallbacks. */
 const CHAIN: ImageProvider[] = [gemini, pollinations]
+
+/** Opt-in only, never reached unless IMAGE_PROVIDER names it. */
+const OPT_IN: ImageProvider[] = [stub]
 
 export interface GenerateResult extends GeneratedImage {
   /** Providers that failed before this one succeeded, for honest UI + logs. */
@@ -20,7 +24,7 @@ export interface GenerateResult extends GeneratedImage {
  */
 export async function generateImage(opts: GenerateOpts): Promise<GenerateResult> {
   const forced = process.env.IMAGE_PROVIDER as ProviderName | undefined
-  const chain = forced ? CHAIN.filter((p) => p.name === forced) : CHAIN
+  const chain = forced ? [...CHAIN, ...OPT_IN].filter((p) => p.name === forced) : CHAIN
 
   if (chain.length === 0) {
     throw new Error(`IMAGE_PROVIDER="${forced}" matches no provider`)

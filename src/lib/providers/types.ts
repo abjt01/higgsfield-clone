@@ -4,7 +4,7 @@ export const ASPECT_RATIOS = [
 
 export type AspectRatio = (typeof ASPECT_RATIOS)[number]
 
-export type ProviderName = 'gemini' | 'pollinations'
+export type ProviderName = 'gemini' | 'pollinations' | 'stub'
 
 export interface GenerateOpts {
   prompt: string

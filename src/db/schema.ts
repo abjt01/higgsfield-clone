@@ -42,7 +42,11 @@ export const generations = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    /** The composed prompt actually sent to the provider. */
     prompt: text('prompt').notNull(),
+    /** What the user typed, before preset scaffolding. Remix rebuilds from this. */
+    subject: text('subject').notNull(),
+    cameraPresetId: text('camera_preset_id'),
     presetId: text('preset_id'),
     aspectRatio: text('aspect_ratio').notNull().default('1:1'),
     // Which provider actually produced this image, so the fallback is
