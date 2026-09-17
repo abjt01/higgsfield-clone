@@ -26,6 +26,17 @@ const Tile = memo(function Tile({
   selected: boolean
   onSelect: (id: string) => void
 }) {
+  const [broken, setBroken] = useState(false)
+
+  // A thumbnail that fails to load must not leave a dead tile. Losing 69 of
+  // them to a stray `git add -A` was invisible until the grid was looked at,
+  // so the fallback is a deterministic gradient keyed off the id rather than
+  // an empty box.
+  const hue = useMemo(
+    () => [...preset.id].reduce((a, c) => a + c.charCodeAt(0) * 7, 0) % 360,
+    [preset.id],
+  )
+
   return (
     <button
       type="button"
@@ -38,14 +49,24 @@ const Tile = memo(function Tile({
           : 'border-line hover:border-muted/60'
       }`}
     >
-      <div className="relative aspect-square bg-surface-2">
-        <Image
-          src={preset.thumb}
-          alt=""
-          fill
-          sizes="(max-width: 640px) 33vw, 150px"
-          className="object-cover transition duration-300 group-hover:scale-105"
-        />
+      <div
+        className="relative aspect-square bg-surface-2"
+        style={
+          broken
+            ? { background: `linear-gradient(145deg, hsl(${hue} 30% 26%), hsl(${(hue + 40) % 360} 30% 8%))` }
+            : undefined
+        }
+      >
+        {!broken && (
+          <Image
+            src={preset.thumb}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 33vw, 150px"
+            onError={() => setBroken(true)}
+            className="object-cover transition duration-300 group-hover:scale-105"
+          />
+        )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 pt-6">
           <p className="truncate text-[11px] font-medium leading-tight">{preset.label}</p>
           <p className="truncate text-[10px] leading-tight text-muted">{preset.family}</p>
