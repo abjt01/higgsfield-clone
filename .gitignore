@@ -15,4 +15,8 @@ build/
 
 *.log
 
+# recon screenshots — local input, not a deliverable. One is 66MB, which GitHub
+# warns on at 50MB and rejects at 100MB. Downscale first if these should ship.
+screenshots-higgs/
+
 # NOTE: .agent-logs/ is deliberately NOT ignored. It ships with the repo.
