@@ -24,6 +24,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/create" className="text-sm text-muted transition hover:text-fg">
               Create
             </Link>
+            <Link href="/feed" className="text-sm text-muted transition hover:text-fg">
+              Community
+            </Link>
+            <Link href="/library" className="text-sm text-muted transition hover:text-fg">
+              Library
+            </Link>
           </div>
         </nav>
         {children}

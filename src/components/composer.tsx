@@ -37,11 +37,32 @@ interface Poll {
 const POLL_MS = 1200
 const POLL_TIMEOUT_MS = 120_000
 
-export function Composer({ presets, initialCredits }: { presets: ClientPreset[]; initialCredits: number }) {
-  const [subject, setSubject] = useState('')
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1')
-  const [cameraId, setCameraId] = useState<string | null>(null)
-  const [styleId, setStyleId] = useState<string | null>(null)
+export interface ComposerInitial {
+  subject: string
+  cameraId: string | null
+  styleId: string | null
+  aspectRatio: string
+}
+
+export function Composer({
+  presets,
+  initialCredits,
+  initial,
+}: {
+  presets: ClientPreset[]
+  initialCredits: number
+  /** Populated when arriving from a remix link. */
+  initial?: ComposerInitial
+}) {
+  const [subject, setSubject] = useState(initial?.subject ?? '')
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(
+    (ASPECT_RATIOS as readonly string[]).includes(initial?.aspectRatio ?? '')
+      ? (initial!.aspectRatio as AspectRatio)
+      : '1:1',
+  )
+  const [cameraId, setCameraId] = useState<string | null>(initial?.cameraId ?? null)
+  const [styleId, setStyleId] = useState<string | null>(initial?.styleId ?? null)
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
   const [tab, setTab] = useState<'camera' | 'style'>('camera')
   const [credits, setCredits] = useState(initialCredits)
 
@@ -120,7 +141,7 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
       const res = await fetch('/api/generations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: subject, aspectRatio, cameraId, styleId }),
+        body: JSON.stringify({ prompt: subject, aspectRatio, cameraId, styleId, visibility }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
@@ -163,6 +184,16 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
+
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={visibility === 'public'}
+                onChange={(e) => setVisibility(e.target.checked ? 'public' : 'private')}
+                className="accent-[var(--color-accent)]"
+              />
+              Public
+            </label>
 
             <span className="text-xs text-muted">{credits} credits</span>
 

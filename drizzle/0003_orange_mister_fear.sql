@@ -1,0 +1,2 @@
+DROP INDEX "generations_visibility_created_idx";--> statement-breakpoint
+CREATE INDEX "generations_feed_idx" ON "generations" USING btree ("created_at" DESC NULLS LAST) WHERE "generations"."visibility" = 'public' and "generations"."image_url" is not null;

@@ -1,4 +1,5 @@
 import { Composer } from '@/components/composer'
+import { getShareable } from '@/lib/feed'
 import { clientPresets } from '@/lib/presets/client'
 import { readUser } from '@/lib/session'
 
@@ -13,11 +14,23 @@ export const metadata = {
   description: 'Prompt, camera move and style presets, then generate.',
 }
 
-export default async function CreatePage() {
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ remix?: string }>
+}) {
+  const { remix } = await searchParams
   // Read-only: the guest session is created by the first POST, because a
   // Server Component is not allowed to set cookies.
   const user = await readUser()
   const presets = clientPresets()
+
+  // Remix is resolved on the server: the composer arrives already populated
+  // rather than mounting empty and back-filling from a client fetch.
+  const source =
+    remix && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(remix)
+      ? await getShareable(remix, user?.id)
+      : null
 
   return (
     <main className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6">
@@ -30,7 +43,27 @@ export default async function CreatePage() {
         </p>
       </header>
 
-      <Composer presets={presets} initialCredits={user?.credits ?? DEFAULT_CREDITS} />
+      {source && (
+        <p className="mb-4 rounded-[var(--radius-card)] border border-accent/40 bg-accent/5 px-4 py-2.5 text-xs text-accent">
+          Remixing {source.author}&rsquo;s generation. Prompt and presets are loaded — change
+          anything you like.
+        </p>
+      )}
+
+      <Composer
+        presets={presets}
+        initialCredits={user?.credits ?? DEFAULT_CREDITS}
+        initial={
+          source
+            ? {
+                subject: source.subject,
+                cameraId: source.camera?.id ?? null,
+                styleId: source.style?.id ?? null,
+                aspectRatio: source.aspectRatio,
+              }
+            : undefined
+        }
+      />
     </main>
   )
 }

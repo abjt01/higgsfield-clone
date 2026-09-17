@@ -15,6 +15,27 @@
       "when": 1789684670539,
       "tag": "0001_fine_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789686780898,
+      "tag": "0002_shiny_clint_barton",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789687086752,
+      "tag": "0003_orange_mister_fear",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789687128038,
+      "tag": "0004_gigantic_lilith",
+      "breakpoints": true
     }
   ]
 }

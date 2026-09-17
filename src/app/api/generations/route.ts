@@ -43,6 +43,14 @@ export const POST = route(async (request: Request) => {
   }
   const ratio = (requested ?? '1:1') as AspectRatio
 
+  // Public by default: this is a community gallery and an empty feed is a dead
+  // demo. Opt-out is explicit in the composer rather than buried.
+  const visibilityRaw = optionalString(body.visibility, 'visibility', 10)
+  if (visibilityRaw && visibilityRaw !== 'public' && visibilityRaw !== 'private') {
+    throw new HttpError('visibility must be "public" or "private"', 400)
+  }
+  const visibility = visibilityRaw ?? 'public'
+
   const db = getDb()
   const user = await getOrCreateUser()
   await checkUserRate(user.id)
@@ -60,6 +68,7 @@ export const POST = route(async (request: Request) => {
       cameraPresetId: camera?.id ?? null,
       presetId: style?.id ?? null,
       aspectRatio: ratio,
+      visibility,
       provider: 'pending',
       model: 'pending',
     })

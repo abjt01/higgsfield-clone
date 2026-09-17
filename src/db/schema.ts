@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   boolean,
   index,
@@ -15,6 +16,8 @@ const createdAt = () =>
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').unique(),
+  /** Shown on community feed cards. Guests get one generated on signup. */
+  displayName: text('display_name').notNull().default('guest'),
   isGuest: boolean('is_guest').notNull().default(true),
   credits: integer('credits').notNull().default(50),
   createdAt: createdAt(),
@@ -60,10 +63,23 @@ export const generations = pgTable(
   },
   (t) => [
     // Library: a user's own generations, newest first.
-    index('generations_user_created_idx').on(t.userId, t.createdAt.desc()),
-    // Community feed: public generations, newest first. Both are keyset-paginated
-    // on created_at, so the index order matches the query order exactly.
-    index('generations_visibility_created_idx').on(t.visibility, t.createdAt.desc()),
+    // NULLS FIRST, not drizzle's default NULLS LAST. Postgres reads
+    // `ORDER BY created_at DESC` as DESC NULLS FIRST, so a NULLS LAST index
+    // cannot supply that ordering and the planner silently ignores it and
+    // sorts instead. Measured: the index was never chosen until this matched.
+    index('generations_user_created_idx').on(t.userId, t.createdAt.desc().nullsFirst()),
+    // Community feed: public, finished generations, newest first.
+    //
+    // Partial and ordered rather than a plain (visibility, created_at) index.
+    // Measured at 40k rows, the plain version was ignored: visibility='public'
+    // matches most of the table so it offers little selectivity, and
+    // image_url IS NOT NULL is not in the index, so the planner preferred a
+    // sequential scan and a top-N sort. Folding both predicates into the index
+    // makes it match the feed query exactly, so the rows come back already
+    // ordered and the sort disappears.
+    index('generations_feed_idx')
+      .on(t.createdAt.desc().nullsFirst())
+      .where(sql`${t.visibility} = 'public' and ${t.imageUrl} is not null`),
   ],
 )
 

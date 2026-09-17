@@ -13,6 +13,7 @@ export interface SessionUser {
   id: string
   credits: number
   isGuest: boolean
+  displayName: string
 }
 
 /**
@@ -37,7 +38,12 @@ export async function readUser(): Promise<SessionUser | null> {
   const row = found[0]
   if (!row || row.expiresAt.getTime() <= Date.now()) return null
 
-  return { id: row.user.id, credits: row.user.credits, isGuest: row.user.isGuest }
+  return {
+    id: row.user.id,
+    credits: row.user.credits,
+    isGuest: row.user.isGuest,
+    displayName: row.user.displayName,
+  }
 }
 
 /**
@@ -55,7 +61,10 @@ export async function getOrCreateUser(): Promise<SessionUser> {
 
   const db = getDb()
   const jar = await cookies()
-  const [user] = await db.insert(users).values({}).returning()
+  const [user] = await db
+    .insert(users)
+    .values({ displayName: `guest-${randomBytes(3).toString('hex')}` })
+    .returning()
   const fresh = randomBytes(32).toString('hex')
 
   await db.insert(sessions).values({
@@ -72,5 +81,10 @@ export async function getOrCreateUser(): Promise<SessionUser> {
     path: '/',
   })
 
-  return { id: user.id, credits: user.credits, isGuest: user.isGuest }
+  return {
+    id: user.id,
+    credits: user.credits,
+    isGuest: user.isGuest,
+    displayName: user.displayName,
+  }
 }
