@@ -13,7 +13,8 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const sh = promisify(execFile)
-const psql = async (q) => (await sh('psql', ['-d', 'higgsfield_dev', '-t', '-A', '-c', q])).stdout.trim()
+const DB = process.env.PGDATABASE ?? 'higgsfield_dev'
+const psql = async (q) => (await sh('psql', ['-d', DB, '-t', '-A', '-c', q])).stdout.trim()
 const BASE = process.env.BASE ?? 'http://localhost:3100'
 
 let fail = 0

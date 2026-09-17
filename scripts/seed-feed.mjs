@@ -12,7 +12,7 @@ import { promisify } from 'node:util'
 import { readdir } from 'node:fs/promises'
 
 const sh = promisify(execFile)
-const DB = process.env.SEED_DB ?? 'higgsfield_dev'
+const DB = process.env.PGDATABASE ?? process.env.SEED_DB ?? 'higgsfield_dev'
 // psql prints the command tag ("INSERT 0 1") on stdout alongside RETURNING
 // output, so take the first line only.
 const psql = async (q) =>

@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push makes an in-flight run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast feedback: no database, no browser, no server.
+  static:
+    name: Lint, types, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Renderer maths
+        # Pure functions over all 44 camera presets: no image, no canvas, no
+        # network. Guards coverage, sharpness and motion-blur thresholds.
+        run: npm run verify:render
+
+      - name: Build
+        run: npm run build
+        env:
+          # The build must not need a reachable database. If this starts
+          # failing, something began touching the DB at build time.
+          NEXT_TELEMETRY_DISABLED: '1'
+
+  # Everything that needs Postgres, a running server and a real browser.
+  integration:
+    name: API, feed and studio
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: higgsfield_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: higgsfield_ci
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/higgsfield_ci
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/higgsfield_ci
+      # Deterministic, offline, no quota. The real providers are rate limited
+      # and would make CI flaky for no added signal.
+      IMAGE_PROVIDER: stub
+      PORT: '3100'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - run: npm ci
+
+      - name: Migrate
+        run: npm run db:migrate
+
+      - name: Build
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start > /tmp/server.log 2>&1 &
+          for i in $(seq 1 60); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/api/feed)" = "200" ]; then
+              echo "server up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "server never became ready"; cat /tmp/server.log; exit 1
+
+      - name: Locate Chrome
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium-browser || true)"
+          if [ -z "$CHROME" ]; then echo "no Chrome on this runner"; exit 1; fi
+          echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
+          echo "using $CHROME"
+
+      # Order matters. verify:api deliberately trips the per-IP rate limiter,
+      # which would then make the other two fail for the wrong reason.
+      - name: Camera studio (real browser, MediaRecorder)
+        run: npm run verify:studio
+
+      - name: Seed the feed
+        run: npm run seed:feed 60
+
+      - name: Feed, pagination, remix, share pages
+        run: npm run verify:feed
+
+      - name: API robustness and concurrency
+        run: npm run verify:api
+
+      - name: Server log on failure
+        if: failure()
+        run: cat /tmp/server.log
