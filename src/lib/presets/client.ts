@@ -1,5 +1,5 @@
 import { ALL_PRESETS } from './index'
-import type { Preset, PresetGroup } from './types'
+import type { Motion, Preset, PresetGroup } from './types'
 
 /**
  * The shape the browser gets.
@@ -16,6 +16,8 @@ export interface ClientPreset {
   description: string
   keywords: string[]
   thumb: string
+  /** Present on camera presets; drives the canvas renderer. */
+  motion?: Motion
 }
 
 function toClient(p: Preset): ClientPreset {
@@ -27,6 +29,7 @@ function toClient(p: Preset): ClientPreset {
     description: p.description,
     keywords: p.keywords ?? [],
     thumb: `/presets/${p.id}.webp`,
+    motion: p.motion,
   }
 }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -7,6 +8,20 @@ import type { ClientPreset } from '@/lib/presets/client'
 import { ASPECT_RATIOS, type AspectRatio } from '@/lib/providers/types'
 
 import { PresetPicker } from './preset-picker'
+
+/**
+ * Canvas + MediaRecorder is the one genuinely heavy client bundle in the app,
+ * and none of it can run on the server, so it loads on demand only once there
+ * is an image to animate.
+ */
+const CameraStudio = dynamic(() => import('./camera-studio'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4 text-sm text-muted">
+      Loading camera studio…
+    </div>
+  ),
+})
 
 type Status = 'idle' | 'queued' | 'running' | 'succeeded' | 'failed'
 
@@ -39,6 +54,13 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
 
   // Split once, not on every keystroke.
   const cameraPresets = useMemo(() => presets.filter((p) => p.group === 'camera'), [presets])
+
+  // id -> { label, motion } for every camera preset that declares motion.
+  const motions = useMemo(() => {
+    const out: Record<string, { label: string; motion: NonNullable<ClientPreset['motion']> }> = {}
+    for (const p of presets) if (p.motion) out[p.id] = { label: p.label, motion: p.motion }
+    return out
+  }, [presets])
   const stylePresets = useMemo(() => presets.filter((p) => p.group === 'style'), [presets])
 
   const camera = cameraId ? presets.find((p) => p.id === cameraId) : undefined
@@ -179,8 +201,19 @@ export function Composer({ presets, initialCredits }: { presets: ClientPreset[];
       </form>
 
       {/* --------------------------------------------------------- output */}
-      <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
-        <Output status={status} poll={poll} error={error} aspectRatio={aspectRatio} subject={subject} />
+      <div className="flex flex-col gap-4">
+        <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
+          <Output status={status} poll={poll} error={error} aspectRatio={aspectRatio} subject={subject} />
+        </div>
+
+        {status === 'succeeded' && poll?.imageUrl && (
+          <CameraStudio
+            imageUrl={poll.imageUrl}
+            cameraPresetId={cameraId}
+            label={camera?.label ?? 'no preset selected'}
+            motions={motions}
+          />
+        )}
       </div>
     </div>
   )

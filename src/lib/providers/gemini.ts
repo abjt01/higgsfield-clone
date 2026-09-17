@@ -37,7 +37,9 @@ export const gemini: ImageProvider = {
         contents: prompt,
         config: {
           responseModalities: ['IMAGE'],
-          imageConfig: { aspectRatio },
+          // 2K because the camera-move renderer crops into the still: at 1K a
+          // 1.95x crash zoom resamples the source and the clip comes out soft.
+          imageConfig: { aspectRatio, imageSize: '2K' },
         },
       })
     } catch (err) {

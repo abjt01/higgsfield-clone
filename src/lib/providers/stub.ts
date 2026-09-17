@@ -77,10 +77,10 @@ export const stub: ImageProvider = {
   },
 
   async generate({ prompt, aspectRatio }: GenerateOpts): Promise<GeneratedImage> {
-    const [w, h] = RATIO_DIMENSIONS[aspectRatio]
-    // Scale down: the stub only needs to prove bytes flow, not look good.
-    const width = Math.round(w / 4)
-    const height = Math.round(h / 4)
+    // Full size, not a thumbnail: the camera-move renderer sizes its canvas
+    // from the source image, so a downscaled stub would make every test of it
+    // unrepresentative.
+    const [width, height] = RATIO_DIMENSIONS[aspectRatio]
 
     // Hash the prompt so the same prompt always yields the same image.
     let seed = 0
