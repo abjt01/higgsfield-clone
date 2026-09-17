@@ -48,3 +48,14 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Preset marquee. Translating by exactly -50% works because each row renders
+   its tiles twice, so the wrap is seamless. */
+@keyframes hf-drift-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes hf-drift-right {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}

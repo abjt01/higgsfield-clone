@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Link from 'next/link'
 
+import { CreditsBadge } from '@/components/credits-badge'
+
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -30,6 +32,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/library" className="text-sm text-muted transition hover:text-fg">
               Library
             </Link>
+            <Link href="/pricing" className="text-sm text-muted transition hover:text-fg">
+              Pricing
+            </Link>
+
+            <div className="ml-auto flex items-center gap-3">
+              <CreditsBadge />
+            </div>
           </div>
         </nav>
         {children}

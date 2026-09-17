@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { announceCredits } from '@/lib/credits'
 import type { ClientPreset } from '@/lib/presets/client'
 import { ASPECT_RATIOS, type AspectRatio } from '@/lib/providers/types'
 
@@ -110,7 +111,21 @@ export function Composer({
         setPoll(data)
         setStatus(data.status)
 
-        if (data.status === 'succeeded' || data.status === 'failed') return
+        if (data.status === 'succeeded' || data.status === 'failed') {
+          // A failed job refunds its credit, so the balance shown must catch up.
+          if (data.status === 'failed') {
+            fetch('/api/me', { cache: 'no-store' })
+              .then((r) => r.json())
+              .then((me) => {
+                if (typeof me.credits === 'number') {
+                  setCredits(me.credits)
+                  announceCredits(me.credits)
+                }
+              })
+              .catch(() => {})
+          }
+          return
+        }
         if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
           setStatus('failed')
           setError('Timed out waiting for the generation.')
@@ -147,6 +162,7 @@ export function Composer({
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`)
 
       setCredits(data.creditsLeft)
+      announceCredits(data.creditsLeft)
       startPolling(data.id)
     } catch (err) {
       setStatus('failed')
