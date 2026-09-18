@@ -173,21 +173,39 @@ scripts/                  generators, seeds and the five verification suites
 
 ## Known gaps
 
-Stated plainly rather than discovered by whoever reads this next.
+Stated plainly rather than left for whoever reads this next. Verified against
+the live deployment, not assumed.
 
-- **Production migrations have not been run.** Vercel does not expose secret
-  environment variables at build time, so `vercel-build` skips the migration
-  and the deployed database has no tables. Every database-backed route on the
-  live URL answers `503` until someone runs `db:migrate` against the direct
-  Neon string. Pages still render — that is what `verify:resilience` guards —
-  but generation, feed, library, remix and share pages do not work.
-- **`IMAGE_PROVIDER` is set in the production environment.** Any value there is
-  wrong: it either serves stubs or disables the fallback chain. It should be
-  unset.
+**The core loop works live:** pages serve in 0.35-1.35s, a generation runs
+`queued -> running -> succeeded` in about four seconds with both presets
+applied, credits decrement and persist, and guest sessions work.
+
+Two production issues remain:
+
+- **No Blob store is connected to the project.** `BLOB_READ_WRITE_TOKEN` is set
+  but no store sits behind it, so `putImage` falls back to inlining images as
+  base64 data URLs in Postgres. The knock-on effect is larger than the wasted
+  storage: the public feed deliberately excludes `data:` URLs (they once turned
+  one HTML document into 4.3MB), so **successful generations never appear in
+  the community feed** and the landing's community wall stays empty. Fix by
+  creating a Blob store in the Vercel dashboard, connecting it to the project
+  and redeploying.
+
+- **Gemini is not serving in production.** With `IMAGE_PROVIDER` correctly
+  unset, the chain runs gemini then pollinations, and every live generation has
+  come back `provider: pollinations` — so Gemini is being tried and failing,
+  falling through silently. Output therefore carries the Pollinations
+  watermark. The reason is logged server side as
+  `[providers] gemini failed, falling through: ...`; check the runtime logs.
+  The fallback reason is not yet persisted on the generation row, which is why
+  this is not visible from the app itself.
+
+Smaller, by choice:
+
 - **The pricing page was not restructured** to match the reference's
   configurator and comparison table. It carries the shared palette and buttons
   but keeps its own simpler layout.
-- Orbit and bullet time are **2.5D** — scale, offset and a few degrees of
+- Orbit and bullet time are **2.5D** - scale, offset and a few degrees of
   rotation on a flat still. They read convincingly as a camera arc, but there
   is no real parallax. True 3D orbit needs a depth map.
 
