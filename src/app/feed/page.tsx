@@ -1,5 +1,7 @@
+import { DbUnavailable } from '@/components/db-unavailable'
 import { GenerationGrid } from '@/components/generation-grid'
 import { getFeedPage } from '@/lib/feed'
+import { safeQuery } from '@/lib/safe-db'
 
 export const dynamic = 'force-dynamic'
 // Short revalidate per the plan: a feed may lag a few seconds, a library may not.
@@ -11,7 +13,7 @@ export const metadata = {
 }
 
 export default async function FeedPage() {
-  const first = await getFeedPage()
+  const first = await safeQuery('feed page', () => getFeedPage())
 
   return (
     <main className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6">
@@ -22,6 +24,9 @@ export default async function FeedPage() {
         </p>
       </header>
 
+      {!first ? (
+        <DbUnavailable what="the community feed" />
+      ) : (
       <GenerationGrid
         endpoint="/api/feed"
         initial={first}
@@ -32,6 +37,7 @@ export default async function FeedPage() {
           actionLabel: 'Generate the first one',
         }}
       />
+      )}
     </main>
   )
 }

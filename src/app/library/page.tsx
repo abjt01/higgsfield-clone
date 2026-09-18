@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
+import { DbUnavailable } from '@/components/db-unavailable'
 import { GenerationGrid } from '@/components/generation-grid'
 import { getLibraryPage } from '@/lib/feed'
+import { safeQuery } from '@/lib/safe-db'
 import { readUser } from '@/lib/session'
 
 // Personal and changes constantly: never cached.
@@ -14,7 +16,7 @@ export const metadata = {
 }
 
 export default async function LibraryPage() {
-  const user = await readUser()
+  const user = await safeQuery('library session', () => readUser())
 
   if (!user) {
     return (
@@ -33,7 +35,7 @@ export default async function LibraryPage() {
     )
   }
 
-  const first = await getLibraryPage(user.id)
+  const first = await safeQuery('library page', () => getLibraryPage(user.id))
 
   return (
     <main className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6">
@@ -44,6 +46,9 @@ export default async function LibraryPage() {
         </span>
       </header>
 
+      {!first ? (
+        <DbUnavailable what="your library" />
+      ) : (
       <GenerationGrid
         endpoint="/api/library"
         initial={first}
@@ -55,6 +60,7 @@ export default async function LibraryPage() {
           actionLabel: 'Create something',
         }}
       />
+      )}
     </main>
   )
 }

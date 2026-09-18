@@ -1,6 +1,7 @@
 import { Composer } from '@/components/composer'
 import { getShareable } from '@/lib/feed'
 import { clientPresets } from '@/lib/presets/client'
+import { safeQuery } from '@/lib/safe-db'
 import { readUser } from '@/lib/session'
 
 // Creates the guest session on first visit, so the page cannot be static.
@@ -22,14 +23,14 @@ export default async function CreatePage({
   const { remix } = await searchParams
   // Read-only: the guest session is created by the first POST, because a
   // Server Component is not allowed to set cookies.
-  const user = await readUser()
+  const user = await safeQuery('create session', () => readUser())
   const presets = clientPresets()
 
   // Remix is resolved on the server: the composer arrives already populated
   // rather than mounting empty and back-filling from a client fetch.
   const source =
     remix && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(remix)
-      ? await getShareable(remix, user?.id)
+      ? await safeQuery('remix source', () => getShareable(remix, user?.id))
       : null
 
   return (

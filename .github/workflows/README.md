@@ -17,9 +17,14 @@ that need all of that:
 | `verify:studio` | Real Chrome: canvas, MediaRecorder, a decodable MP4, CORS taint |
 | `verify:feed` | Keyset pagination, one-join feed cards, share pages, OG images, remix |
 | `verify:api` | Credits under concurrency, atomic job claim, stale-job reaping, ownership, rate limits |
+| `verify:resilience` | Every page still renders and the API answers 503 when Postgres is unreachable |
 
 The order is deliberate. `verify:api` deliberately trips the per-IP rate
 limiter, so running it first makes the other two fail for the wrong reason.
+
+The resilience step restarts the server against a dead database on purpose.
+Migrating a database fixes one outage; this stops the app regressing to a 500
+on the landing page the next time the database is briefly unreachable.
 
 `IMAGE_PROVIDER=stub` keeps CI deterministic and offline. Gemini and
 Pollinations are both rate limited and would make runs flaky without adding

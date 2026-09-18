@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { SafeImage } from '@/components/safe-image'
+import { DbUnavailable } from '@/components/db-unavailable'
 import { getShareable } from '@/lib/feed'
+import { safeQuery } from '@/lib/safe-db'
 import { readUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +22,7 @@ export async function generateMetadata({
   const { id } = await params
   if (!isUuid(id)) return { title: 'Not found' }
 
-  const card = await getShareable(id)
+  const card = await safeQuery('share metadata', () => getShareable(id))
   if (!card) return { title: 'Not found' }
 
   const title = card.subject.slice(0, 70)
@@ -38,8 +40,23 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
   const { id } = await params
   if (!isUuid(id)) notFound()
 
-  const viewer = await readUser()
-  const card = await getShareable(id, viewer?.id)
+  const viewer = await safeQuery('share session', () => readUser())
+
+  // A read failure is not a 404. Returning "not found" for an unreachable
+  // database would tell people their generation was deleted.
+  const lookup = await safeQuery('share lookup', async () => ({
+    card: await getShareable(id, viewer?.id),
+  }))
+
+  if (!lookup) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <DbUnavailable what="this generation" />
+      </main>
+    )
+  }
+
+  const card = lookup.card
   if (!card) notFound()
 
   const [w, h] = card.aspectRatio.split(':').map(Number)

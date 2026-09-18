@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { PresetMarquee } from '@/components/preset-marquee'
 import { SafeImage } from '@/components/safe-image'
 import { getFeedPage } from '@/lib/feed'
+import { safeQuery } from '@/lib/safe-db'
 import { CAMERA_PRESETS } from '@/lib/presets/cameras'
 import { clientPresets } from '@/lib/presets/client'
 import { STYLE_PRESETS } from '@/lib/presets/styles'
@@ -26,7 +27,9 @@ const HERO_MOVES = ['crash-zoom-in', 'orbit-left', 'drone-pull-back', 'bullet-ti
 
 export default async function Home() {
   const presets = clientPresets()
-  const feed = await getFeedPage(undefined, 8)
+  // Degrades rather than 500s: the landing has no real dependency on the
+  // database, and it is the first page anyone hits.
+  const feed = await safeQuery('landing feed', () => getFeedPage(undefined, 8))
 
   const shots = HERO_SHOTS.map((name, i) => {
     const preset = CAMERA_PRESETS.find((p) => p.id === HERO_MOVES[i])!
@@ -131,7 +134,7 @@ export default async function Home() {
       </section>
 
       {/* -------------------------------------------------------- community */}
-      {feed.items.length > 0 && (
+      {feed && feed.items.length > 0 && (
         <section className="mx-auto max-w-[90rem] px-4 pb-20 sm:px-6">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>

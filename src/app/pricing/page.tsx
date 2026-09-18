@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { PricingTable } from '@/components/pricing-table'
 import { CREDIT_COST, PLANS } from '@/lib/plans'
+import { safeQuery } from '@/lib/safe-db'
 import { readUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,7 @@ export const metadata = {
 }
 
 export default async function PricingPage() {
-  const user = await readUser()
+  const user = await safeQuery('pricing session', () => readUser())
 
   return (
     <main className="mx-auto max-w-[80rem] px-4 py-14 sm:px-6">

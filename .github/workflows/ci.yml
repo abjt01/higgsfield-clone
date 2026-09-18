@@ -127,6 +127,25 @@ jobs:
       - name: API robustness and concurrency
         run: npm run verify:api
 
+      # Restarted against a dead database: the point is that pages still render
+      # and the API answers 503 rather than 500 when Postgres is unreachable.
+      - name: Restart server with an unreachable database
+        run: |
+          pkill -f "next-server" || true
+          sleep 2
+          DATABASE_URL=postgresql://nobody@localhost:5999/nope npm run start > /tmp/dead.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/ || true)
+            if [ "$code" = "200" ]; then echo "server up (degraded) after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "degraded server never became ready"; cat /tmp/dead.log; exit 1
+
+      - name: Degrades instead of 500ing without a database
+        run: npm run verify:resilience
+
       - name: Server log on failure
         if: failure()
-        run: cat /tmp/server.log
+        run: |
+          echo '--- server.log ---'; cat /tmp/server.log || true
+          echo '--- dead.log ---';   cat /tmp/dead.log || true

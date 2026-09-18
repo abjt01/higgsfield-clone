@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 
 import { getShareable } from '@/lib/feed'
+import { safeQuery } from '@/lib/safe-db'
 
 export const runtime = 'nodejs'
 export const size = { width: 1200, height: 630 }
@@ -16,7 +17,9 @@ export const alt = 'Generation'
  * broken card instead of a plain one.
  */
 export default async function Image({ params }: { params: { id: string } }) {
-  const card = /^[0-9a-f-]{36}$/i.test(params.id) ? await getShareable(params.id) : null
+  const card = /^[0-9a-f-]{36}$/i.test(params.id)
+    ? await safeQuery('og lookup', () => getShareable(params.id))
+    : null
 
   const usable = card?.imageUrl && !card.imageUrl.startsWith('data:') ? card.imageUrl : null
   const subject = card?.subject ?? 'Higgsfield clone'
