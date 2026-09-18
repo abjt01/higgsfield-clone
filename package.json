@@ -16,7 +16,8 @@
     "probe:api": "bash scripts/probe-api.sh",
     "verify:feed": "node scripts/verify-feed.mjs",
     "seed:feed": "node scripts/seed-feed.mjs",
-    "verify:resilience": "node scripts/verify-resilience.mjs"
+    "verify:resilience": "node scripts/verify-resilience.mjs",
+    "vercel-build": "node scripts/migrate-deploy.mjs && next build"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",
