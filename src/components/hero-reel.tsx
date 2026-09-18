@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Motion } from '@/lib/presets/types'
@@ -118,9 +119,31 @@ export default function HeroReel({ shots }: { shots: ReelShot[] }) {
 
   return (
     <div className="relative overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface-2">
-      <canvas ref={canvasRef} className="block w-full" style={{ aspectRatio: '16 / 9' }} />
+      {/* Poster. The canvas cannot be the LCP element because it is painted by
+          a dynamically imported component, so the browser never learns to fetch
+          its first image early. This renders the same still immediately with
+          fetchPriority high, then hands over once the reel is running. */}
+      <Image
+        src={shots[0].src}
+        alt=""
+        width={1280}
+        height={720}
+        // Without sizes, next/image builds a 2x srcset and mobile picks w=3840
+        // — a 3840px render of a 1280px source, which was the LCP cost. The
+        // hero is full width below lg and a little over half of it above.
+        sizes="(max-width: 1024px) 100vw, 55vw"
+        priority
+        quality={70}
+        className={`block w-full transition-opacity duration-500 ${ready ? 'absolute inset-0 opacity-0' : 'opacity-100'}`}
+        style={{ aspectRatio: '16 / 9', objectFit: 'cover' }}
+      />
 
-      {!ready && <div className="absolute inset-0 animate-pulse bg-surface-2" />}
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className={`block w-full ${ready ? '' : 'absolute inset-0 opacity-0'}`}
+        style={{ aspectRatio: '16 / 9' }}
+      />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-4 pt-14">
         <div className="flex flex-wrap items-center gap-2">

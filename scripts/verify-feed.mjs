@@ -24,6 +24,17 @@ const check = (ok, label, detail = '') => {
 }
 const get = (p, cookie) => fetch(`${BASE}${p}`, { headers: cookie ? { cookie } : {}, cache: 'no-store' })
 
+// ---- fixtures --------------------------------------------------------------
+// Self-seeding. verify-api truncates the database, so depending on a previous
+// step having seeded made this suite pass or fail on run order rather than on
+// the code. CI still seeds explicitly; this makes local runs order-independent.
+const MIN_ROWS = 40
+const existing = Number(await psql("select count(*) from generations where visibility='public'"))
+if (existing < MIN_ROWS) {
+  console.log(`  ..  only ${existing} public rows, seeding fixtures`)
+  await sh('node', ['scripts/seed-feed.mjs', '60'], { env: process.env })
+}
+
 // ---- feed shape ------------------------------------------------------------
 const p1 = await (await get('/api/feed?limit=10')).json()
 check(p1.items.length === 10, 'feed returns a full page', `${p1.items.length} items`)
@@ -67,7 +78,11 @@ for (;;) {
   cursor = page.nextCursor
   if (pages > 30) break
 }
-const total = Number(await psql("select count(*) from generations where visibility='public'"))
+// Must match the feed's own filter: an unfinished generation has a null
+// image_url and is deliberately excluded from a public gallery.
+const total = Number(
+  await psql("select count(*) from generations where visibility='public' and image_url is not null"),
+)
 check(seen.size === total, 'walking every page yields each row exactly once', `${seen.size}/${total} in ${pages} pages`)
 
 // inserting a row mid-scroll must not shift the window (the OFFSET failure mode)
@@ -110,10 +125,28 @@ if (publicRows < 5000) {
 const anon = await (await get('/api/library')).json()
 check(anon.items.length === 0, 'library is empty without a session')
 
-const made = await fetch(`${BASE}/api/generations`, {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prompt: 'library isolation test', visibility: 'private' }),
-})
+/**
+ * A POST the suite depends on. The per-IP limiter is shared with everything
+ * else hitting this server, so a preceding suite can leave it saturated; wait
+ * rather than continuing with a null cookie and an undefined id.
+ */
+async function postOk(body) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await fetch(`${BASE}/api/generations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (res.ok && res.headers.get('set-cookie')) return res
+    await res.text()
+    if (res.status !== 429) throw new Error(`setup POST failed: HTTP ${res.status}`)
+    process.stdout.write('  ..  rate limited, waiting\n')
+    await new Promise((r) => setTimeout(r, 10_000))
+  }
+  throw new Error('rate limit never cleared')
+}
+
+const made = await postOk({ prompt: 'library isolation test', visibility: 'private' })
 const cookie = made.headers.get('set-cookie').split(';')[0]
 const { id: mineId } = await made.json()
 await new Promise((r) => setTimeout(r, 2500))

@@ -106,7 +106,7 @@ export function PresetPicker({ presets, selectedId, onSelect, noneLabel }: Props
           className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-accent/60"
         />
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by family">
           <Chip active={family === null} onClick={() => setFamily(null)}>
             All
           </Chip>
@@ -119,6 +119,12 @@ export function PresetPicker({ presets, selectedId, onSelect, noneLabel }: Props
       </div>
 
       <div className="scroll-slim min-h-0 flex-1 overflow-y-auto pr-1">
+        {/* Announced so a screen-reader user knows the grid changed when they
+            type in the search box or switch family. */}
+        <p role="status" aria-live="polite" className="sr-only">
+          {visible.length} presets shown
+        </p>
+
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           <button
             type="button"

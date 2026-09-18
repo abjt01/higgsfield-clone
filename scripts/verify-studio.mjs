@@ -97,14 +97,30 @@ try {
   check(isWebm || isMp4, 'bytes are a real video container', isWebm ? 'WebM/Matroska' : isMp4 ? 'MP4' : h.join(','))
 
   // and the browser can actually decode it
-  const playable = await page.evaluate(() => {
-    const v = document.querySelector('video')
-    return v ? { duration: v.duration, w: v.videoWidth, h: v.videoHeight } : null
-  })
+  // Wait for metadata rather than reading straight after the element appears.
+  // Locally the decode happened to land first and this passed by luck; on CI it
+  // read 0x0 with an undefined duration.
+  const playable = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const v = document.querySelector('video')
+        if (!v) return resolve(null)
+
+        const read = () => ({ duration: v.duration, w: v.videoWidth, h: v.videoHeight })
+        if (v.readyState >= 1 && v.videoWidth > 0) return resolve(read())
+
+        const done = () => resolve(read())
+        v.addEventListener('loadedmetadata', done, { once: true })
+        v.addEventListener('error', () => resolve({ duration: 0, w: 0, h: 0, failed: true }), { once: true })
+        setTimeout(done, 8000)
+      }),
+  )
   check(
     playable && playable.w > 0 && playable.h > 0,
     'decodes with real dimensions',
-    playable ? `${playable.w}x${playable.h}, ${playable.duration?.toFixed?.(2)}s` : 'no video element',
+    playable
+      ? `${playable.w}x${playable.h}, ${playable.duration?.toFixed?.(2)}s${playable.failed ? ' (decode error)' : ''}`
+      : 'no video element',
   )
 
   check(errors.length === 0, 'no console/page errors', errors.slice(0, 2).join(' | '))

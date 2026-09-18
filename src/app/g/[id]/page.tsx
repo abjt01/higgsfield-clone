@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { SafeImage } from '@/components/safe-image'
 import { getShareable } from '@/lib/feed'
 import { readUser } from '@/lib/session'
 
@@ -48,7 +48,8 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
         <div className="relative bg-surface-2" style={{ aspectRatio: `${w} / ${h}` }}>
-          <Image
+          <SafeImage
+            seed={card.id}
             src={card.imageUrl}
             alt={card.subject}
             fill

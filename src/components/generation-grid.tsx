@@ -1,20 +1,22 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { EmptyState } from '@/components/empty-state'
+import { SafeImage } from '@/components/safe-image'
+import { GridSkeleton } from '@/components/skeletons'
 import type { FeedCard } from '@/lib/feed'
 
 interface Props {
   endpoint: '/api/feed' | '/api/library'
   initial: { items: FeedCard[]; nextCursor: string | null }
-  emptyMessage: string
+  empty: { title: string; body: string; actionHref?: string; actionLabel?: string }
   /** Library shows visibility and download; the feed does not. */
   showVisibility?: boolean
 }
 
-export function GenerationGrid({ endpoint, initial, emptyMessage, showVisibility }: Props) {
+export function GenerationGrid({ endpoint, initial, empty, showVisibility }: Props) {
   const [items, setItems] = useState(initial.items)
   const [cursor, setCursor] = useState(initial.nextCursor)
   const [loading, setLoading] = useState(false)
@@ -63,9 +65,7 @@ export function GenerationGrid({ endpoint, initial, emptyMessage, showVisibility
     return () => io.disconnect()
   }, [cursor, loadMore])
 
-  if (items.length === 0) {
-    return <p className="py-20 text-center text-sm text-muted">{emptyMessage}</p>
-  }
+  if (items.length === 0) return <EmptyState {...empty} />
 
   return (
     <>
@@ -85,7 +85,15 @@ export function GenerationGrid({ endpoint, initial, emptyMessage, showVisibility
       )}
 
       <div ref={sentinel} className="h-10" />
-      {loading && <p className="pb-8 text-center text-xs text-muted">Loading…</p>}
+
+      {loading && (
+        <div className="pb-8">
+          <p role="status" aria-live="polite" className="sr-only">
+            Loading more
+          </p>
+          <GridSkeleton count={4} />
+        </div>
+      )}
     </>
   )
 }
@@ -97,7 +105,8 @@ function Card({ item, showVisibility }: { item: FeedCard & { visibility?: string
     <figure className="group overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
       <Link href={`/g/${item.id}`} className="block">
         <div className="relative bg-surface-2" style={{ aspectRatio: `${w} / ${h}` }}>
-          <Image
+          <SafeImage
+            seed={item.id}
             src={item.imageUrl}
             alt={item.subject}
             fill

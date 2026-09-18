@@ -28,7 +28,7 @@ export function PricingTable({ plans }: { plans: Plan[] }) {
         </button>
 
         <span className={`text-xs ${annual ? 'text-fg' : 'text-muted'}`}>Annual</span>
-        <span className="rounded-full bg-hot px-2 py-0.5 text-[10px] font-semibold text-white">
+        <span className="rounded-full bg-hot-bg px-2 py-0.5 text-[10px] font-semibold text-white">
           20% OFF
         </span>
       </div>
@@ -49,7 +49,7 @@ export function PricingTable({ plans }: { plans: Plan[] }) {
                 {plan.badge && (
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      plan.highlight ? 'bg-accent text-black' : 'bg-hot text-white'
+                      plan.highlight ? 'bg-accent text-black' : 'bg-hot-bg text-white'
                     }`}
                   >
                     {plan.badge}
@@ -77,11 +77,13 @@ export function PricingTable({ plans }: { plans: Plan[] }) {
                 {plan.features.map((f) => (
                   <li
                     key={f.label}
-                    className={`flex items-start gap-2 text-xs ${f.included ? '' : 'text-muted/60'}`}
+                    className={`flex items-start gap-2 text-xs ${f.included ? '' : 'text-muted-dim line-through decoration-muted-dim/50'}`}
                   >
-                    <span className={f.included ? 'text-accent' : 'text-muted/50'} aria-hidden>
+                    <span className={f.included ? 'text-accent' : 'text-muted-dim'} aria-hidden>
                       {f.included ? '✓' : '×'}
                     </span>
+                    {/* Say it, do not only colour it. */}
+                    <span className="sr-only">{f.included ? 'Included:' : 'Not included:'}</span>
                     {f.label}
                   </li>
                 ))}

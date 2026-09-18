@@ -25,7 +25,12 @@ export default async function FeedPage() {
       <GenerationGrid
         endpoint="/api/feed"
         initial={first}
-        emptyMessage="Nothing public yet. Generate something and it lands here."
+        empty={{
+          title: 'The feed is empty',
+          body: 'Nothing has been shared publicly yet. Anything you generate is public by default, so yours would be the first.',
+          actionHref: '/create',
+          actionLabel: 'Generate the first one',
+        }}
       />
     </main>
   )

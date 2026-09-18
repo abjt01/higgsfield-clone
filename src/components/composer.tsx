@@ -216,7 +216,9 @@ export function Composer({
             <button
               type="submit"
               disabled={busy || !subject.trim()}
-              className="ml-auto rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-black transition hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-40"
+              // Disabled swaps to a neutral surface. Fading the lime turns it
+              // olive, which reads as a broken colour rather than an off state.
+              className="ml-auto rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed enabled:bg-accent enabled:text-black enabled:hover:bg-accent-dim disabled:bg-surface-3 disabled:text-muted"
             >
               {busy ? 'Generating…' : 'Generate'}
             </button>
@@ -231,16 +233,31 @@ export function Composer({
         )}
 
         <div className="flex h-[30rem] flex-col rounded-[var(--radius-card)] border border-line bg-surface p-4">
-          <div className="mb-3 flex shrink-0 gap-1 rounded-lg bg-surface-2 p-1">
-            <TabButton active={tab === 'camera'} onClick={() => setTab('camera')}>
+          <div
+            role="tablist"
+            aria-label="Preset type"
+            onKeyDown={(e) => {
+              // Arrow keys move between tabs, which is what a tablist implies.
+              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+              e.preventDefault()
+              setTab((t) => (t === 'camera' ? 'style' : 'camera'))
+            }}
+            className="mb-3 flex shrink-0 gap-1 rounded-lg bg-surface-2 p-1"
+          >
+            <TabButton id="tab-camera" panelId="panel-presets" active={tab === 'camera'} onClick={() => setTab('camera')}>
               Camera · {cameraPresets.length}
             </TabButton>
-            <TabButton active={tab === 'style'} onClick={() => setTab('style')}>
+            <TabButton id="tab-style" panelId="panel-presets" active={tab === 'style'} onClick={() => setTab('style')}>
               Style · {stylePresets.length}
             </TabButton>
           </div>
 
-          <div className="min-h-0 flex-1">
+          <div
+            id="panel-presets"
+            role="tabpanel"
+            aria-labelledby={tab === 'camera' ? 'tab-camera' : 'tab-style'}
+            className="min-h-0 flex-1"
+          >
             {tab === 'camera' ? (
               <PresetPicker
                 presets={cameraPresets}
@@ -262,6 +279,10 @@ export function Composer({
 
       {/* --------------------------------------------------------- output */}
       <div className="flex flex-col gap-4">
+        <p role="status" aria-live="polite" className="sr-only">
+          {status === 'idle' ? '' : `Generation ${status}`}
+        </p>
+
         <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
           <Output status={status} poll={poll} error={error} aspectRatio={aspectRatio} subject={subject} />
         </div>
@@ -367,10 +388,14 @@ function SelectedChip({ label, onClear }: { label: string; onClear: () => void }
 }
 
 function TabButton({
+  id,
+  panelId,
   active,
   onClick,
   children,
 }: {
+  id: string
+  panelId: string
   active: boolean
   onClick: () => void
   children: React.ReactNode
@@ -378,6 +403,13 @@ function TabButton({
   return (
     <button
       type="button"
+      id={id}
+      role="tab"
+      aria-selected={active}
+      aria-controls={panelId}
+      // Roving tabindex: only the selected tab is in the tab order, arrows move
+      // between them.
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
         active ? 'bg-accent text-black' : 'text-muted hover:text-fg'

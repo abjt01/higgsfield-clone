@@ -12,7 +12,15 @@
   --color-muted: #8b8b8b;
   --color-accent: #d7fc51;
   --color-accent-dim: #b9dd35;
+  /* Two pinks on purpose. #ff2d78 clears 4.5:1 as text on the dark surfaces
+     (5.46) but only reaches 3.56 as a badge background under white text, so
+     badges use a slightly deeper one that clears 4.61. */
   --color-hot: #ff2d78;
+  --color-hot-bg: #e11d63;
+
+  /* Dimmed body text. muted at 60% opacity computed to #595959, which is
+     2.77:1 and unreadable; this is the darkest value that still clears 4.5. */
+  --color-muted-dim: #7d7d7d;
 
   --radius-card: 0.875rem;
 }
@@ -58,4 +66,31 @@ body {
 @keyframes hf-drift-right {
   from { transform: translateX(-50%); }
   to   { transform: translateX(0); }
+}
+
+/* Keyboard focus. Visible on every interactive element, and only for keyboard
+   users so pointer clicks do not leave a ring behind. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Never remove the outline without replacing it. */
+:where(a, button, input, select, textarea):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Inputs inherit the page font rather than the UA default. */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+/* Set by the inline script before first paint, so a dismissed bar never
+   renders and then disappears. */
+.hf-ann-hidden [data-announcement] {
+  display: none;
 }

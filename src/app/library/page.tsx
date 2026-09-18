@@ -48,7 +48,12 @@ export default async function LibraryPage() {
         endpoint="/api/library"
         initial={first}
         showVisibility
-        emptyMessage="No finished generations yet."
+        empty={{
+          title: 'Nothing finished yet',
+          body: 'Generations appear here once they succeed. If one failed, its credit was refunded automatically.',
+          actionHref: '/create',
+          actionLabel: 'Create something',
+        }}
       />
     </main>
   )

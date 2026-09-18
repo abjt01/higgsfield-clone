@@ -40,10 +40,26 @@ export default async function PricingPage() {
         <h2 className="text-lg font-semibold tracking-tight">What a credit buys</h2>
         <div className="mt-4 overflow-hidden rounded-[var(--radius-card)] border border-line">
           <table className="w-full text-left text-sm">
+            <caption className="sr-only">What each action costs in credits</caption>
+            <thead>
+              <tr className="border-b border-line">
+                <th scope="col" className="bg-surface-2 px-4 py-2.5 text-xs font-medium text-muted">
+                  Action
+                </th>
+                <th scope="col" className="bg-surface-2 px-4 py-2.5 text-xs font-medium text-muted">
+                  Cost
+                </th>
+                <th scope="col" className="bg-surface-2 px-4 py-2.5 text-xs font-medium text-muted">
+                  Notes
+                </th>
+              </tr>
+            </thead>
             <tbody>
               {CREDIT_COST.map((row, i) => (
                 <tr key={row.label} className={i > 0 ? 'border-t border-line' : ''}>
-                  <td className="bg-surface px-4 py-3 font-medium">{row.label}</td>
+                  <th scope="row" className="bg-surface px-4 py-3 text-left font-medium">
+                    {row.label}
+                  </th>
                   <td className="bg-surface px-4 py-3 tabular-nums text-accent">
                     {row.credits === 0 ? 'Free' : `${row.credits} credit`}
                   </td>

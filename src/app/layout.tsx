@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import Link from 'next/link'
 
-import { CreditsBadge } from '@/components/credits-badge'
+import { ANNOUNCEMENT_SCRIPT, AnnouncementBar } from '@/components/announcement-bar'
+import { SiteNav } from '@/components/site-nav'
 
 import './globals.css'
 
@@ -17,31 +17,25 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Before paint: hides a previously dismissed bar without a shift. */}
+        <script dangerouslySetInnerHTML={{ __html: ANNOUNCEMENT_SCRIPT }} />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <nav className="sticky top-0 z-20 border-b border-line bg-ink/80 backdrop-blur">
-          <div className="mx-auto flex max-w-[90rem] items-center gap-6 px-4 py-3 sm:px-6">
-            <Link href="/" className="text-sm font-semibold tracking-tight">
-              higgsfield<span className="text-accent">.clone</span>
-            </Link>
-            <Link href="/create" className="text-sm text-muted transition hover:text-fg">
-              Create
-            </Link>
-            <Link href="/feed" className="text-sm text-muted transition hover:text-fg">
-              Community
-            </Link>
-            <Link href="/library" className="text-sm text-muted transition hover:text-fg">
-              Library
-            </Link>
-            <Link href="/pricing" className="text-sm text-muted transition hover:text-fg">
-              Pricing
-            </Link>
+        {/* Keyboard users should not have to tab the whole nav on every page. */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-black"
+        >
+          Skip to content
+        </a>
 
-            <div className="ml-auto flex items-center gap-3">
-              <CreditsBadge />
-            </div>
-          </div>
-        </nav>
-        {children}
+        <AnnouncementBar />
+        <SiteNav />
+
+        <div id="main">
+          {children}
+        </div>
       </body>
     </html>
   )

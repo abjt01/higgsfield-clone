@@ -1,8 +1,8 @@
 import nextDynamic from 'next/dynamic'
-import Image from 'next/image'
 import Link from 'next/link'
 
 import { PresetMarquee } from '@/components/preset-marquee'
+import { SafeImage } from '@/components/safe-image'
 import { getFeedPage } from '@/lib/feed'
 import { CAMERA_PRESETS } from '@/lib/presets/cameras'
 import { clientPresets } from '@/lib/presets/client'
@@ -33,7 +33,10 @@ export default async function Home() {
     return { src: `/hero/${name}.webp`, label: preset.label, motion: preset.motion! }
   })
 
-  const showcase = presets.filter((p) => p.group === 'style').slice(0, 24)
+  // 16, not 24. Each row renders its tiles twice for a seamless loop, so 8 per
+  // row already overflows the viewport; the extra 8 were 8 more image requests
+  // below the fold for no visible gain.
+  const showcase = presets.filter((p) => p.group === 'style').slice(0, 16)
 
   return (
     <main>
@@ -83,7 +86,7 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------ presets */}
-      <section className="border-y border-line bg-surface/40 py-12">
+      <section className="border-y border-line bg-surface/40 py-10 sm:py-12">
         <div className="mx-auto mb-6 max-w-[90rem] px-4 sm:px-6">
           <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             The preset system
@@ -103,7 +106,7 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------ features */}
-      <section className="mx-auto max-w-[90rem] px-4 py-16 sm:px-6">
+      <section className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 sm:py-16">
         <div className="grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line md:grid-cols-3">
           {[
             {
@@ -149,7 +152,8 @@ export default async function Home() {
                 href={`/g/${item.id}`}
                 className="group relative aspect-square overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface-2"
               >
-                <Image
+                <SafeImage
+                  seed={item.id}
                   src={item.imageUrl}
                   alt={item.subject}
                   fill
@@ -168,7 +172,7 @@ export default async function Home() {
 
       {/* -------------------------------------------------------------- cta */}
       <section className="border-t border-line">
-        <div className="mx-auto max-w-[90rem] px-4 py-20 text-center sm:px-6">
+        <div className="mx-auto max-w-[90rem] px-4 py-14 text-center sm:px-6 sm:py-20">
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Your first shot costs one credit<span className="text-accent">.</span>
           </h2>
