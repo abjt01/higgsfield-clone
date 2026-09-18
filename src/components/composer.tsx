@@ -45,15 +45,24 @@ export interface ComposerInitial {
   aspectRatio: string
 }
 
+/** Deep-link state from the footer's family links. */
+export interface ComposerFocus {
+  tab?: 'camera' | 'style'
+  family?: string
+}
+
 export function Composer({
   presets,
   initialCredits,
   initial,
+  focus,
 }: {
   presets: ClientPreset[]
   initialCredits: number
   /** Populated when arriving from a remix link. */
   initial?: ComposerInitial
+  /** Populated when arriving from a footer family link. */
+  focus?: ComposerFocus
 }) {
   const [subject, setSubject] = useState(initial?.subject ?? '')
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(
@@ -64,7 +73,7 @@ export function Composer({
   const [cameraId, setCameraId] = useState<string | null>(initial?.cameraId ?? null)
   const [styleId, setStyleId] = useState<string | null>(initial?.styleId ?? null)
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
-  const [tab, setTab] = useState<'camera' | 'style'>('camera')
+  const [tab, setTab] = useState<'camera' | 'style'>(focus?.tab ?? 'camera')
   const [credits, setCredits] = useState(initialCredits)
 
   const [status, setStatus] = useState<Status>('idle')
@@ -266,6 +275,7 @@ export function Composer({
                 selectedId={cameraId}
                 onSelect={setCameraId}
                 noneLabel="No camera move"
+                initialFamily={focus?.tab === 'camera' ? focus.family : undefined}
               />
             ) : (
               <PresetPicker
@@ -273,6 +283,7 @@ export function Composer({
                 selectedId={styleId}
                 onSelect={setStyleId}
                 noneLabel="No style"
+                initialFamily={focus?.tab === 'style' ? focus.family : undefined}
               />
             )}
           </div>

@@ -18,9 +18,9 @@ export const metadata = {
 export default async function CreatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ remix?: string }>
+  searchParams: Promise<{ remix?: string; tab?: string; family?: string }>
 }) {
-  const { remix } = await searchParams
+  const { remix, tab, family } = await searchParams
   // Read-only: the guest session is created by the first POST, because a
   // Server Component is not allowed to set cookies.
   const user = await safeQuery('create session', () => readUser())
@@ -54,6 +54,13 @@ export default async function CreatePage({
       <Composer
         presets={presets}
         initialCredits={user?.credits ?? DEFAULT_CREDITS}
+        focus={{
+          tab: tab === 'style' ? 'style' : tab === 'camera' ? 'camera' : undefined,
+          // Only honour a family that exists, so a stale link cannot filter
+          // the grid down to nothing with no way back.
+          family:
+            family && presets.some((p) => p.family === family) ? family : undefined,
+        }}
         initial={
           source
             ? {

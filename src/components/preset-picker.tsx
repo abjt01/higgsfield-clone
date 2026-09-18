@@ -11,6 +11,8 @@ interface Props {
   onSelect: (id: string | null) => void
   /** Copy for the "no preset" tile. */
   noneLabel: string
+  /** Preselected family, so a deep link from the footer lands filtered. */
+  initialFamily?: string | null
 }
 
 /**
@@ -76,9 +78,9 @@ const Tile = memo(function Tile({
   )
 })
 
-export function PresetPicker({ presets, selectedId, onSelect, noneLabel }: Props) {
+export function PresetPicker({ presets, selectedId, onSelect, noneLabel, initialFamily }: Props) {
   const [query, setQuery] = useState('')
-  const [family, setFamily] = useState<string | null>(null)
+  const [family, setFamily] = useState<string | null>(initialFamily ?? null)
 
   // Keeps typing responsive: the input updates immediately, the 81-tile grid
   // re-filters at a lower priority instead of blocking each keystroke.

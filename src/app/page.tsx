@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 import { MediaWall, type WallTile } from '@/components/media-wall'
 import { PanelSection, SectionHeading, ViewAllPill } from '@/components/section'
+import { SiteFooter } from '@/components/site-footer'
 import { getFeedPage } from '@/lib/feed'
 import { CAMERA_PRESETS } from '@/lib/presets/cameras'
 import { clientPresets } from '@/lib/presets/client'
@@ -70,6 +71,7 @@ export default async function Home() {
   }))
 
   return (
+    <>
     <main className="mx-auto max-w-[96rem] space-y-10 px-4 pb-16 pt-5 sm:px-5">
       {/* ------------------------------------------- top card row (no hero) */}
       <section>
@@ -224,5 +226,8 @@ export default async function Home() {
         </Link>
       </section>
     </main>
+
+    <SiteFooter />
+    </>
   )
 }
