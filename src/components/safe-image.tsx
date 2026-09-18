@@ -1,39 +1,38 @@
-'use client'
-
 import Image, { type ImageProps } from 'next/image'
-import { useMemo, useState } from 'react'
 
 /**
- * next/image that degrades instead of leaving a dead box.
+ * next/image with a fallback that needs no JavaScript.
  *
- * A missing upstream file makes the image optimiser return 400, which renders
- * as an empty rectangle and logs a console error. Generated images can vanish
- * (a purged blob, an expired URL, a file that never got committed), so the
- * fallback is a deterministic gradient keyed off `seed` rather than nothing.
+ * The first version of this was a client component using onError. That made
+ * every tile client-rendered, so the browser could not discover any of them
+ * until hydration — with ~40 tiles on the landing wall it pushed mobile LCP
+ * from 2.9s to 12.6s and performance from 95 to 53.
+ *
+ * Instead the fallback is painted *behind* the image as a gradient derived
+ * from `seed`. If the file 404s the image simply draws nothing and the
+ * gradient shows through, which is the same result with zero client cost and
+ * a server-rendered `<img>` the preloader can find.
+ *
+ * Requires a positioned ancestor, which every caller already has for `fill`.
  */
 export function SafeImage({
   seed,
   alt,
   ...props
 }: ImageProps & { seed: string }) {
-  const [broken, setBroken] = useState(false)
+  let h = 0
+  for (const ch of seed) h = (h + ch.charCodeAt(0) * 7) % 360
 
-  const hue = useMemo(
-    () => [...seed].reduce((a, c) => a + c.charCodeAt(0) * 7, 0) % 360,
-    [seed],
-  )
-
-  if (broken) {
-    return (
+  return (
+    <>
       <span
         aria-hidden
-        className="absolute inset-0 block"
+        className="absolute inset-0"
         style={{
-          background: `linear-gradient(145deg, hsl(${hue} 28% 24%), hsl(${(hue + 40) % 360} 28% 8%))`,
+          background: `linear-gradient(145deg, hsl(${h} 28% 24%), hsl(${(h + 40) % 360} 28% 8%))`,
         }}
       />
-    )
-  }
-
-  return <Image {...props} alt={alt} onError={() => setBroken(true)} />
+      <Image {...props} alt={alt} />
+    </>
+  )
 }

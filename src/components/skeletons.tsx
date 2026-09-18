@@ -5,19 +5,18 @@
  * a skeleton that is the wrong height is worse than none, because it costs a
  * layout shift on every load.
  */
-export function GridSkeleton({ count = 8 }: { count?: number }) {
+export function GridSkeleton({ count = 10 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-hidden="true">
+    <div
+      className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+      aria-hidden="true"
+    >
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
-          <div className="aspect-square animate-pulse bg-surface-2" />
-          <div className="space-y-2 p-3">
-            <div className="h-2.5 w-full animate-pulse rounded bg-surface-2" />
-            <div className="h-2.5 w-2/3 animate-pulse rounded bg-surface-2" />
-            <div className="flex gap-1.5 pt-1">
-              <div className="h-4 w-16 animate-pulse rounded-full bg-surface-2" />
-              <div className="h-4 w-12 animate-pulse rounded-full bg-surface-2" />
-            </div>
+        <div key={i}>
+          <div className="aspect-square animate-pulse rounded-[var(--radius-tile)] bg-surface-2" />
+          <div className="pt-2.5">
+            <div className="h-3 w-4/5 animate-pulse rounded bg-surface-2" />
+            <div className="mt-1.5 h-2.5 w-1/2 animate-pulse rounded bg-surface-2" />
           </div>
         </div>
       ))}

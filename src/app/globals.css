@@ -3,26 +3,38 @@
 /* Palette taken from the reference screenshots: near-black surfaces, a single
    lime accent, pink reserved for TOP badges. */
 @theme {
-  --color-ink: #000000;
-  --color-surface: #0d0d0d;
-  --color-surface-2: #161616;
+  /* Palette read off the reference captures rather than invented.
+     The page is not pure black: it sits at #0a0a0a so panels can step up to
+     #141414/#181818 and read as surfaces. Pure black flattened them. */
+  --color-ink: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #181818;
   --color-surface-3: #1f1f1f;
   --color-line: #262626;
+  /* Borders on media are wrong (see the gallery treatment); this is for panels. */
+  --color-line-soft: #1c1c1c;
+
   --color-fg: #f5f5f5;
-  --color-muted: #8b8b8b;
-  --color-accent: #d7fc51;
-  --color-accent-dim: #b9dd35;
-  /* Two pinks on purpose. #ff2d78 clears 4.5:1 as text on the dark surfaces
-     (5.46) but only reaches 3.56 as a badge background under white text, so
-     badges use a slightly deeper one that clears 4.61. */
+  /* Reference muted is lighter than the #8b8b8b I had — 7.04:1 here. */
+  --color-muted: #9a9a9a;
+  --color-muted-dim: #808080;
+
+  /* Brighter and yellower than my #d7fc51, matching the reference CTAs. */
+  --color-accent: #e4ff3a;
+  --color-accent-dim: #ccee2a;
+
+  /* Two pinks on purpose: #ff2d78 clears 4.5:1 as text on these surfaces
+     (5.46) but only 3.56 as a badge background under white text. */
   --color-hot: #ff2d78;
   --color-hot-bg: #e11d63;
 
-  /* Dimmed body text. muted at 60% opacity computed to #595959, which is
-     2.77:1 and unreadable; this is the darkest value that still clears 4.5. */
-  --color-muted-dim: #7d7d7d;
+  /* Secondary accent the reference uses for certain feature rows and its
+     model sub-panels. I had none, which is part of why mine reads flatter. */
+  --color-info: #6cb6ff;
 
-  --radius-card: 0.875rem;
+  /* Panels are rounded harder than tiles in the reference. */
+  --radius-card: 1rem;
+  --radius-tile: 0.625rem;
 }
 
 html,
@@ -93,4 +105,60 @@ button {
    renders and then disappears. */
 .hf-ann-hidden [data-announcement] {
   display: none;
+}
+
+/* Buttons are pills in the reference, and the secondary is a solid white pill
+   rather than a bordered ghost. That pairing is a large part of the look. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color 150ms, color 150ms, opacity 150ms;
+  white-space: nowrap;
+}
+.btn-lime {
+  background: var(--color-accent);
+  color: #000;
+}
+.btn-lime:hover {
+  background: var(--color-accent-dim);
+}
+.btn-white {
+  background: #fff;
+  color: #000;
+}
+.btn-white:hover {
+  background: #e2e2e2;
+}
+.btn-ghost {
+  background: color-mix(in srgb, #fff 8%, transparent);
+  color: var(--color-fg);
+}
+.btn-ghost:hover {
+  background: color-mix(in srgb, #fff 14%, transparent);
+}
+
+/* Section heading: 20px uppercase lime. The reference puts its display type on
+   panel headings mid-page, not on a hero, so these stay small and dense. */
+.eyebrow {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* Panel heading: the big one. ~40px uppercase lime, heavy, tight. */
+.display {
+  font-size: clamp(1.75rem, 4.5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
 }

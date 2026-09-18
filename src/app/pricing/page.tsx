@@ -83,7 +83,7 @@ export default async function PricingPage() {
         </p>
         <Link
           href="/create"
-          className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-black transition hover:bg-accent-dim"
+          className="btn btn-lime mt-4"
         >
           Use your free credits
         </Link>

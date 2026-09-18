@@ -95,10 +95,8 @@ export function PricingTable({ plans }: { plans: Plan[] }) {
                 type="button"
                 disabled
                 title="Billing is not implemented — see the note below"
-                className={`mt-6 cursor-not-allowed rounded-lg border px-4 py-2.5 text-sm font-semibold ${
-                  plan.highlight
-                    ? 'border-accent/60 text-accent'
-                    : 'border-line text-muted'
+                className={`btn mt-6 cursor-not-allowed justify-center ${
+                  plan.highlight ? 'bg-accent/20 text-accent' : 'bg-surface-3 text-muted'
                 }`}
               >
                 {plan.id === 'free' ? 'Your current plan' : `Get ${plan.name}`}

@@ -69,7 +69,7 @@ export function GenerationGrid({ endpoint, initial, empty, showVisibility }: Pro
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {items.map((item) => (
           <Card key={item.id} item={item} showVisibility={showVisibility} />
         ))}
@@ -101,10 +101,17 @@ export function GenerationGrid({ endpoint, initial, empty, showVisibility }: Pro
 function Card({ item, showVisibility }: { item: FeedCard & { visibility?: string }; showVisibility?: boolean }) {
   const [w, h] = item.aspectRatio.split(':').map(Number)
 
+  // Gallery, not dashboard. The reference gives media tiles no border and no
+  // surface fill, lets the image run edge to edge, and puts the caption below
+  // and outside it. A bordered card with the caption overlaid on the image is
+  // what made this read as an admin panel rather than a showcase.
   return (
-    <figure className="group overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
+    <figure className="group">
       <Link href={`/g/${item.id}`} className="block">
-        <div className="relative bg-surface-2" style={{ aspectRatio: `${w} / ${h}` }}>
+        <div
+          className="relative overflow-hidden rounded-[var(--radius-tile)] bg-surface-2"
+          style={{ aspectRatio: `${w} / ${h}` }}
+        >
           <SafeImage
             seed={item.id}
             src={item.imageUrl}
@@ -112,42 +119,29 @@ function Card({ item, showVisibility }: { item: FeedCard & { visibility?: string
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 320px"
             unoptimized={item.imageUrl.startsWith('data:')}
-            className="object-cover transition duration-300 group-hover:scale-[1.03]"
+            className="object-cover transition duration-500 group-hover:scale-[1.04]"
           />
         </div>
       </Link>
 
-      <figcaption className="space-y-2 p-3">
-        <p className="line-clamp-2 text-xs leading-snug">{item.subject}</p>
+      <figcaption className="pt-2.5">
+        <p className="line-clamp-1 text-[13px] font-medium leading-tight">{item.subject}</p>
 
-        <div className="flex flex-wrap gap-1">
-          {item.camera && <Tag>{item.camera.label}</Tag>}
-          {item.style && <Tag>{item.style.label}</Tag>}
-          {showVisibility && item.visibility === 'private' && <Tag muted>Private</Tag>}
-        </div>
-
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <span className="truncate text-[10px] text-muted">{item.author}</span>
+        <div className="mt-1.5 flex items-center gap-2">
+          <span className="truncate text-[11px] text-muted">{item.author}</span>
+          {item.camera && <span className="truncate text-[11px] text-muted">· {item.camera.label}</span>}
+          {showVisibility && item.visibility === 'private' && (
+            <span className="text-[11px] text-muted-dim">· Private</span>
+          )}
           <Link
             href={`/create?remix=${item.id}`}
-            className="shrink-0 rounded-md bg-accent px-2 py-1 text-[10px] font-semibold text-black transition hover:bg-accent-dim"
+            // Revealed on hover, but always reachable by keyboard.
+            className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-accent opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
           >
-            Remix
+            Remix ↗
           </Link>
         </div>
       </figcaption>
     </figure>
-  )
-}
-
-function Tag({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
-  return (
-    <span
-      className={`rounded-full border px-1.5 py-0.5 text-[10px] ${
-        muted ? 'border-line text-muted' : 'border-accent/40 text-accent'
-      }`}
-    >
-      {children}
-    </span>
   )
 }

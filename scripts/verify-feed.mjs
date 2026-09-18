@@ -78,10 +78,14 @@ for (;;) {
   cursor = page.nextCursor
   if (pages > 30) break
 }
-// Must match the feed's own filter: an unfinished generation has a null
-// image_url and is deliberately excluded from a public gallery.
+// Must match the feed's own filter exactly, or the walk looks lossy. An
+// unfinished generation has a null image_url, and a dev-fallback generation
+// has a base64 data URL; both are deliberately excluded from a public gallery.
 const total = Number(
-  await psql("select count(*) from generations where visibility='public' and image_url is not null"),
+  await psql(
+    "select count(*) from generations where visibility='public'" +
+      " and image_url is not null and image_url not like 'data:%'",
+  ),
 )
 check(seen.size === total, 'walking every page yields each row exactly once', `${seen.size}/${total} in ${pages} pages`)
 

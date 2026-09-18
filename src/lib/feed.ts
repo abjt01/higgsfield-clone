@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lt } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, lt, notLike } from 'drizzle-orm'
 
 import { getDb } from '@/db'
 import { generations, users } from '@/db/schema'
@@ -72,6 +72,11 @@ export async function getFeedPage(cursor?: Date, limit = FEED_PAGE_SIZE): Promis
     eq(generations.visibility, 'public'),
     // Only finished generations belong in a public gallery.
     isNotNull(generations.imageUrl),
+    // Never serve the dev storage fallback to the public feed. When Blob is
+    // not configured, putImage inlines the image as a base64 data URL; ten of
+    // those on the landing page turned one HTML document into 4.3MB and took
+    // mobile Lighthouse from 95 to 53. Blob URLs are unaffected.
+    notLike(generations.imageUrl, 'data:%'),
   )
 
   const rows = await db

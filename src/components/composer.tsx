@@ -218,7 +218,9 @@ export function Composer({
               disabled={busy || !subject.trim()}
               // Disabled swaps to a neutral surface. Fading the lime turns it
               // olive, which reads as a broken colour rather than an off state.
-              className="ml-auto rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed enabled:bg-accent enabled:text-black enabled:hover:bg-accent-dim disabled:bg-surface-3 disabled:text-muted"
+              // Pill, and a neutral surface when disabled: fading the lime
+              // turns it olive, which reads as a broken colour not an off state.
+              className="btn ml-auto disabled:cursor-not-allowed enabled:btn-lime disabled:bg-surface-3 disabled:text-muted"
             >
               {busy ? 'Generating…' : 'Generate'}
             </button>
